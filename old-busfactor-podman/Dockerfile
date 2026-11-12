@@ -1,6 +1,7 @@
 FROM docker.io/library/python:2.7-slim
 
 ARG GH_HOST=github.com
+ARG GH_ORG=SOM-Research
 
 RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list && \
     sed -i 's|security.debian.org/debian-security|archive.debian.org/debian-security|g' /etc/apt/sources.list && \
@@ -17,6 +18,8 @@ RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/source
     python-pil \
     python-pil.imagetk \
     python-docutils \
+    chromium \
+    chromium-driver \
     zlib1g-dev \
     libjpeg-dev \
     libfreetype6-dev \
@@ -57,6 +60,9 @@ RUN pip install --no-cache-dir \
     diff-match-patch==20181111
 
 RUN cd /opt/Gitana && pip install --no-deps .
+
+RUN sed -i "s|WEB_BROWSER_PATH = .*|WEB_BROWSER_PATH = '/usr/bin/chromedriver'|g" /opt/busfactor/tool.py && \
+    sed -i "s|webdriver.Chrome(executable_path=WEB_BROWSER_PATH)|opts = webdriver.ChromeOptions(); opts.add_argument('--no-sandbox'); opts.add_argument('--disable-dev-shm-usage'); driver = webdriver.Chrome(executable_path=WEB_BROWSER_PATH, chrome_options=opts)|g" /opt/busfactor/tool.py
 
 RUN chmod -R 777 /app /opt/busfactor
 
