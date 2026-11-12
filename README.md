@@ -4,7 +4,8 @@ Modernize https://github.com/SOM-Research/busfactor
 ## How-to run old busfactor GUI tool inside podman (on Linux Mint)
 Running the old `python 2.7` GUI tool from https://github.com/SOM-Research/busfactor.git
 ```bash
-./old-busfactor-podman/start.sh
+cd ./old-busfactor-podman
+./start.sh
 ```
 
 - Using Podman under `Linux Mint 22 Zena`.
@@ -19,5 +20,6 @@ What podman compose stack will do:
 
 ## Stop old busfactor GUI tool
 ```bash
+cd ./old-busfactor-podman
 ./old-busfactor-podman/stop.sh
 ```
