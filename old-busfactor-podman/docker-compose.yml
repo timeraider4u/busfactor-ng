@@ -1,0 +1,69 @@
+services:
+  db:
+    image: docker.io/library/mysql:5.7
+    container_name: busfactor_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cloner:
+    build: .
+    container_name: busfactor_cloner
+    userns_mode: "keep-id"
+    env_file:
+      - .env
+    volumes:
+      - workspace:/workspace
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        rm -rf /workspace/repo
+        git clone "$$REPO_URL" /workspace/repo
+
+  gitana:
+    build: .
+    container_name: busfactor_gitana
+    userns_mode: "keep-id"
+    env_file:
+      - .env
+    volumes:
+      - workspace:/workspace
+      - shared_data:/opt/busfactor/data
+    depends_on:
+      db:
+        condition: service_healthy
+      cloner:
+        condition: service_completed_successfully
+    command: ["python", "/app/gitana_extract.py"]
+
+  busfactor:
+    build: .
+    container_name: busfactor_gui
+    userns_mode: "keep-id"
+    working_dir: /opt/busfactor
+    security_opt:
+      - label=disable
+    volumes:
+      - shared_data:/opt/busfactor/data
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/tmp/.Xauthority
+      - QT_X11_NO_MITSHM=1
+    depends_on:
+      gitana:
+        condition: service_completed_successfully
+    command: ["python", "/opt/busfactor/tool.py"]
+
+volumes:
+  mysql_data:
+  workspace:
+  shared_data:
