@@ -1,7 +1,6 @@
 FROM docker.io/library/python:2.7-slim
 
 ARG GH_HOST=github.com
-ARG GH_ORG=SOM-Research
 
 RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list && \
     sed -i 's|security.debian.org/debian-security|archive.debian.org/debian-security|g' /etc/apt/sources.list && \
@@ -15,6 +14,12 @@ RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/source
     python-numpy \
     python-psutil \
     python-lxml \
+    python-pil \
+    python-pil.imagetk \
+    python-docutils \
+    zlib1g-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libx11-6 \
     libxext6 \
     libxrender1 \
@@ -25,10 +30,12 @@ RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/source
 
 WORKDIR /app
 
-RUN git clone "https://${GH_HOST}/${GH_ORG}/Gitana.git" /opt/Gitana && \
-    git clone "https://${GH_HOST}/${GH_ORG}/busfactor.git" /opt/busfactor
+RUN git clone "https://${GH_HOST}/valeriocos/Gitana.git" /opt/Gitana && \
+    git clone "https://${GH_HOST}/SOM-Research/busfactor.git" /opt/busfactor
 
 RUN pip install --no-cache-dir \
+    docutils==0.16 \
+    Pillow==6.2.2 \
     networkx==2.2 \
     mysql-connector-python==8.0.23 \
     gitpython==2.1.15 \
@@ -39,9 +46,13 @@ RUN pip install --no-cache-dir \
     slacker==0.14.0 \
     python-bugzilla==2.5.0 \
     requests==2.27.1 \
+    urllib3==1.26.18 \
     python-dateutil==2.8.2 \
     psutil==5.9.8 \
-    numpy==1.16.6
+    numpy==1.16.6 \
+    selenium==3.141.0 \
+    py-stackexchange==2.2.7 \
+    simplejson==3.17.6
 
 RUN cd /opt/Gitana && pip install --no-deps .
 

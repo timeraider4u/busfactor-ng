@@ -41,7 +41,7 @@ services:
         condition: service_healthy
       cloner:
         condition: service_completed_successfully
-    command: ["python", "/app/gitana_extract.py"]
+    command: ["/bin/sh", "-c", "rm -f /opt/busfactor/data/repo_data.json && python /app/gitana_extract.py"]
 
   busfactor:
     build: .
@@ -61,7 +61,8 @@ services:
     depends_on:
       gitana:
         condition: service_completed_successfully
-    command: ["python", "/opt/busfactor/tool.py"]
+    command: ["/bin/sh", "-c", "echo '[*] Waiting for repo_data.json...'; while [ ! -f /opt/busfactor/data/repo_data.json ]; do sleep 2; done; python /opt/busfactor/tool.py"]
+
 
 volumes:
   mysql_data:
