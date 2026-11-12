@@ -52,7 +52,9 @@ RUN pip install --no-cache-dir \
     numpy==1.16.6 \
     selenium==3.141.0 \
     py-stackexchange==2.2.7 \
-    simplejson==3.17.6
+    simplejson==3.17.6 \
+    lizard==1.17.10 \
+    diff-match-patch==20181111
 
 RUN cd /opt/Gitana && pip install --no-deps .
 
