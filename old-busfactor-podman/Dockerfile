@@ -67,3 +67,4 @@ RUN sed -i "s|WEB_BROWSER_PATH = .*|WEB_BROWSER_PATH = '/usr/bin/chromedriver'|g
 RUN chmod -R 777 /app /opt/busfactor
 
 COPY gitana_extract.py /app/gitana_extract.py
+COPY run_busfactor.py /app/run_busfactor.py

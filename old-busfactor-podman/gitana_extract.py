@@ -5,7 +5,23 @@ import socket
 import mysql.connector
 from gitana.gitana import Gitana
 
+repo_url = os.environ.get("REPO_URL", "https://github.com")
 branch = os.environ.get("BRANCH_NAME", "origin/master")
+
+repo_name = os.path.basename(repo_url.rstrip("/"))
+if repo_name.endswith(".git"):
+    repo_name = repo_name[:-4]
+
+export_dir = os.path.join("/shared", repo_name)
+if not os.path.exists(export_dir):
+    os.makedirs(export_dir)
+
+tmp_json = os.path.join(export_dir, "repo_data.json.tmp")
+final_json = os.path.join(export_dir, "repo_data.json")
+
+for path in (tmp_json, final_json):
+    if os.path.exists(path):
+        os.remove(path)
 
 print("[*] Waiting for MySQL database 'db' to become reachable...")
 while True:
@@ -40,14 +56,7 @@ g.create_project("bus_factor_db", "target_project")
 print("[*] Importing Git repository data into MySQL...")
 g.import_git_data("bus_factor_db", "target_project", "target_repo", "/workspace/repo")
 
-tmp_json = "/shared/repo_data.json.tmp"
-final_json = "/shared/repo_data.json"
-if os.path.exists(tmp_json):
-    os.remove(tmp_json)
-if os.path.exists(final_json):
-    os.remove(final_json)
-
-print("[*] Exporting JSON for branch: {}...".format(branch))
+print("[*] Exporting JSON for branch '{}' to {}...".format(branch, final_json))
 g.export_json("bus_factor_db", "target_repo", tmp_json, references=[branch])
 
 if os.path.getsize(tmp_json) == 0:
