@@ -1,5 +1,6 @@
 import os
 import time
+import shutil
 import socket
 import mysql.connector
 from gitana.gitana import Gitana
@@ -39,6 +40,18 @@ g.create_project("bus_factor_db", "target_project")
 print("[*] Importing Git repository data into MySQL...")
 g.import_git_data("bus_factor_db", "target_project", "target_repo", "/workspace/repo")
 
+tmp_json = "/shared/repo_data.json.tmp"
+final_json = "/shared/repo_data.json"
+if os.path.exists(tmp_json):
+    os.remove(tmp_json)
+if os.path.exists(final_json):
+    os.remove(final_json)
+
 print("[*] Exporting JSON for branch: {}...".format(branch))
-g.export_json("bus_factor_db", "target_repo", "/shared/repo_data.json", references=[branch])
-print("[+] Gitana extraction finished successfully.")
+g.export_json("bus_factor_db", "target_repo", tmp_json, references=[branch])
+
+if os.path.getsize(tmp_json) == 0:
+    raise RuntimeError("Exported JSON is empty! Check BRANCH_NAME or MySQL sql-mode.")
+
+shutil.move(tmp_json, final_json)
+print("[+] Gitana extraction finished successfully ({} bytes).".format(os.path.getsize(final_json)))
