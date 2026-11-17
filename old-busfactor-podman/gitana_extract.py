@@ -46,7 +46,7 @@ def validate_branch_exists(repo_path, branch):
         parts = line.split()
         if len(parts) < 2:
             continue
-        ref = parts
+        ref = parts[1]
         if ref.startswith("refs/remotes/") and not ref.endswith("/HEAD"):
             valid_gitana_refs.append((ref[len("refs/remotes/"):], "branch"))
         elif ref.startswith("refs/tags/"):
@@ -137,7 +137,7 @@ def get_imported_commit_count(db_ip):
     row = cursor.fetchone()
     cursor.close()
     conn.close()
-    return row if row else 0
+    return row[0] if row else 0
 
 
 def run_import_with_progress(gitana_client, db_ip, repo_path):
