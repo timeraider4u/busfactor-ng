@@ -6,7 +6,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
     volumes:
       - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password --sql-mode=""
+    command: --default-authentication-plugin=mysql_native_password --sql-mode="" -max-allowed-packet=256M
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 5s
@@ -21,11 +21,7 @@ services:
       - .env
     volumes:
       - workspace:/workspace
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        rm -rf /workspace/repo
-        git clone "$$REPO_URL" /workspace/repo
+    command: ["/app/clone_repo.sh"]
 
   gitana:
     build: .
@@ -41,7 +37,7 @@ services:
         condition: service_healthy
       cloner:
         condition: service_completed_successfully
-    command: ["python", "/app/gitana_extract.py"]
+    command: ["/bin/sh", "-c", "echo '[*] Waiting for git clone to finish...'; while [ ! -f /workspace/repo/.git/HEAD ]; do sleep 2; done; python /app/gitana_extract.py"]
 
   busfactor:
     build: .

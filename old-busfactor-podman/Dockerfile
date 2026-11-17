@@ -68,3 +68,5 @@ RUN chmod -R 777 /app /opt/busfactor
 
 COPY gitana_extract.py /app/gitana_extract.py
 COPY run_busfactor.py /app/run_busfactor.py
+COPY clone_repo.sh /app/clone_repo.sh
+RUN chmod +x /app/clone_repo.sh

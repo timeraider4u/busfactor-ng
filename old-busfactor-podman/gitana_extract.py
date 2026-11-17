@@ -1,4 +1,5 @@
 import os
+import glob
 import time
 import shutil
 import socket
@@ -55,6 +56,37 @@ g.create_project("bus_factor_db", "target_project")
 
 print("[*] Importing Git repository data into MySQL...")
 g.import_git_data("bus_factor_db", "target_project", "target_repo", "/workspace/repo")
+
+conn = mysql.connector.connect(
+    user='root',
+    password='root',
+    host=db_ip,
+    port=3306,
+    database='bus_factor_db'
+)
+cursor = conn.cursor()
+cursor.execute("SELECT COUNT(*) FROM commit;")
+commit_count = cursor.fetchone()[0]
+cursor.close()
+conn.close()
+
+if commit_count == 0:
+    log_files = sorted(
+        glob.glob("/app/logs/*") + glob.glob("/opt/Gitana/logs/*") + glob.glob("logs/*"),
+        key=os.path.getmtime
+    )
+    log_output = []
+    for lf in log_files:
+        if os.path.isfile(lf):
+            with open(lf, "r") as f:
+                lines = f.readlines()[-30:]
+            log_output.append("=== {} ===\n{}".format(lf, "".join(lines)))
+
+    raise RuntimeError(
+        "Gitana imported 0 commits into MySQL!\nGitana Logs:\n{}".format(
+            "\n".join(log_output) if log_output else "No log files found."
+        )
+    )
 
 print("[*] Exporting JSON for branch '{}' to {}...".format(branch, final_json))
 g.export_json("bus_factor_db", "target_repo", tmp_json, references=[branch])
