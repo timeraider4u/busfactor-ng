@@ -71,12 +71,13 @@ What podman compose stack will do:
     ```
 1. You can find exported JSON files and HTML report inside `output` sub-directories.
 
-## How-to run old busfactor GUI tool inside podman (on Linux Mint) - for a different git repository:
-Adjust `old-busfactor-podman/.env` file, e.g.,
-```env
-REPO_URL=https://github.com/pytest-dev/pytest.git
-BRANCH_NAME=origin/9.2.x
-CLONE_DEPTH=500
+### Run it on pytest-dev/pytest
+Use settings from `old-busfactor-podman/.env.pytest`, e.g.,: 
+```bash
+cd ./old-busfactor-podman
+cp .env.pytest .env
+./stop.sh
+./start.sh
 ```
 
 ## Stop old busfactor GUI tool
