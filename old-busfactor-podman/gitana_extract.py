@@ -59,8 +59,24 @@ g.import_git_data("bus_factor_db", "target_project", "target_repo", "/workspace/
 print("[*] Exporting JSON for branch '{}' to {}...".format(branch, final_json))
 g.export_json("bus_factor_db", "target_repo", tmp_json, references=[branch])
 
-if os.path.getsize(tmp_json) == 0:
-    raise RuntimeError("Exported JSON is empty! Check BRANCH_NAME or MySQL sql-mode.")
+if not os.path.exists(tmp_json) or os.path.getsize(tmp_json) == 0:
+    conn = mysql.connector.connect(
+        user='root',
+        password='root',
+        host=db_ip,
+        port=3306,
+        database='bus_factor_db'
+    )
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, type FROM reference ORDER BY type, name;")
+    refs = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    available = ", ".join(["{} ({})".format(name, ref_type) for name, ref_type in refs]) or "NONE"
+    raise RuntimeError(
+        "Exported JSON is empty for branch '{}'! Available references in DB: [{}]".format(branch, available)
+    )
 
 shutil.move(tmp_json, final_json)
 print("[+] Gitana extraction finished successfully ({} bytes).".format(os.path.getsize(final_json)))
