@@ -2,10 +2,16 @@ services:
   db:
     image: docker.io/library/mysql:5.7
     container_name: busfactor_db
+    hostname: db
     environment:
       MYSQL_ROOT_PASSWORD: root
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      busfactor_net:
+        aliases:
+          - db
+
     command:
       - "--default-authentication-plugin=mysql_native_password"
       - "--sql-mode="
@@ -24,21 +30,29 @@ services:
     build: .
     container_name: busfactor_cloner
     userns_mode: "keep-id"
+    group_add:
+      - "keep-groups"
     env_file:
       - .env
     volumes:
       - workspace:/workspace
+    networks:
+      - busfactor_net
     command: ["/app/clone_repo.sh"]
 
   gitana:
     build: .
     container_name: busfactor_gitana
     userns_mode: "keep-id"
+    group_add:
+      - "keep-groups"
     env_file:
       - .env
     volumes:
       - workspace:/workspace
       - ./output:/shared:z
+    networks:
+      - busfactor_net
     depends_on:
       db:
         condition: service_healthy
@@ -50,6 +64,8 @@ services:
     build: .
     container_name: busfactor_gui
     userns_mode: "keep-id"
+    group_add:
+      - "keep-groups"
     working_dir: /opt/busfactor
     env_file:
       - .env
@@ -63,6 +79,8 @@ services:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/tmp/.Xauthority
       - QT_X11_NO_MITSHM=1
+    networks:
+      - busfactor_net
     depends_on:
       gitana:
         condition: service_completed_successfully
@@ -71,3 +89,8 @@ services:
 volumes:
   mysql_data:
   workspace:
+
+networks:
+  busfactor_net:
+    driver: bridge
+

@@ -80,6 +80,15 @@ cp .env.pytest .env
 ./start.sh
 ```
 
+### Run it on django/django
+Use settings from `old-busfactor-podman/.env.django`, e.g.,: 
+```bash
+cd ./old-busfactor-podman
+cp .env.django .env
+./stop.sh
+./start.sh
+```
+
 ## Stop old busfactor GUI tool
 ```bash
 cd ./old-busfactor-podman
