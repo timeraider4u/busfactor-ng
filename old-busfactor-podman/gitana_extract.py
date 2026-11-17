@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import json
 import time
 import shutil
 import socket
@@ -31,11 +32,8 @@ def get_export_paths(repo_url):
 
     tmp_json = os.path.join(export_dir, "repo_data.json.tmp")
     final_json = os.path.join(export_dir, "repo_data.json")
-    for path in (tmp_json, final_json):
-        if os.path.exists(path):
-            os.remove(path)
-
-    return tmp_json, final_json
+    meta_json = os.path.join(export_dir, "repo_data.meta.json")
+    return tmp_json, final_json, meta_json
 
 
 def validate_branch_exists(repo_path, branch):
@@ -48,7 +46,7 @@ def validate_branch_exists(repo_path, branch):
         parts = line.split()
         if len(parts) < 2:
             continue
-        ref = parts[1]
+        ref = parts
         if ref.startswith("refs/remotes/") and not ref.endswith("/HEAD"):
             valid_gitana_refs.append((ref[len("refs/remotes/"):], "branch"))
         elif ref.startswith("refs/tags/"):
@@ -66,6 +64,36 @@ def validate_branch_exists(repo_path, branch):
         )
 
     log("[*] Verified branch/reference '{}' exists in {}.".format(branch, repo_path))
+
+
+def get_branch_commit_sha(repo_path, branch):
+    return subprocess.check_output(
+        ["git", "-C", repo_path, "rev-parse", branch]
+    ).decode("utf-8", "replace").strip()
+
+
+def should_skip_import(final_json, meta_json, branch, commit_sha, clone_depth):
+    if not os.path.exists(final_json) or os.path.getsize(final_json) == 0:
+        return False
+    if not os.path.exists(meta_json):
+        return False
+
+    try:
+        with open(meta_json, "r") as handle:
+            meta = json.load(handle)
+        return (
+            meta.get("branch") == branch
+            and meta.get("commit_sha") == commit_sha
+            and str(meta.get("clone_depth", "")) == str(clone_depth)
+        )
+    except Exception:
+        return False
+
+
+def cleanup_stale_files(*paths):
+    for path in paths:
+        if os.path.exists(path):
+            os.remove(path)
 
 
 def wait_for_mysql_and_reset_db(db_host="db", db_port=3306):
@@ -109,7 +137,7 @@ def get_imported_commit_count(db_ip):
     row = cursor.fetchone()
     cursor.close()
     conn.close()
-    return row[0] if row else 0
+    return row if row else 0
 
 
 def run_import_with_progress(gitana_client, db_ip, repo_path):
@@ -168,7 +196,7 @@ def verify_import_succeeded(db_ip):
     )
 
 
-def export_and_verify_json(gitana_client, db_ip, branch, tmp_json, final_json):
+def export_and_verify_json(gitana_client, db_ip, branch, tmp_json, final_json, meta_json, commit_sha, clone_depth):
     log("[*] Exporting JSON for branch '{}' to {}...".format(branch, final_json))
     gitana_client.export_json(DB_NAME, REPO_ALIAS, tmp_json, references=[branch])
 
@@ -188,15 +216,36 @@ def export_and_verify_json(gitana_client, db_ip, branch, tmp_json, final_json):
         )
 
     shutil.move(tmp_json, final_json)
+    with open(meta_json, "w") as handle:
+        json.dump(
+            {
+                "branch": branch,
+                "commit_sha": commit_sha,
+                "clone_depth": str(clone_depth),
+            },
+            handle,
+            indent=2,
+        )
+
     log("[+] Gitana extraction finished successfully ({} bytes).".format(os.path.getsize(final_json)))
 
 
 def main():
     repo_url = os.environ.get("REPO_URL", "https://github.com")
     branch = os.environ.get("BRANCH_NAME", "origin/master")
+    clone_depth = os.environ.get("CLONE_DEPTH", "")
 
-    tmp_json, final_json = get_export_paths(repo_url)
+    tmp_json, final_json, meta_json = get_export_paths(repo_url)
     validate_branch_exists(REPO_PATH, branch)
+    commit_sha = get_branch_commit_sha(REPO_PATH, branch)
+
+    if should_skip_import(final_json, meta_json, branch, commit_sha, clone_depth):
+        log("[+] Skipping Gitana import: {} is already up to date for '{}' ({}).".format(
+            final_json, branch, commit_sha[:12]
+        ))
+        return
+
+    cleanup_stale_files(tmp_json, final_json, meta_json)
     db_ip = wait_for_mysql_and_reset_db()
 
     config = {
@@ -215,7 +264,7 @@ def main():
 
     run_import_with_progress(gitana_client, db_ip, REPO_PATH)
     verify_import_succeeded(db_ip)
-    export_and_verify_json(gitana_client, db_ip, branch, tmp_json, final_json)
+    export_and_verify_json(gitana_client, db_ip, branch, tmp_json, final_json, meta_json, commit_sha, clone_depth)
 
 
 if __name__ == "__main__":
