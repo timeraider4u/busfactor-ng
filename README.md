@@ -63,7 +63,7 @@ What podman compose stack will do:
 Adjust `old-busfactor-podman/.env` file, e.g.,
 ```env
 REPO_URL=https://github.com/pytest-dev/pytest.git
-BRANCH_NAME=9.2.x
+BRANCH_NAME=origin/9.2.x
 CLONE_DEPTH=500
 ```
 
