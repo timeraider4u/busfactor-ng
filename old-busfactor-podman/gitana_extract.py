@@ -27,6 +27,31 @@ for path in (tmp_json, final_json):
     if os.path.exists(path):
         os.remove(path)
 
+# Early check in cloned git repository, if branch from .env file exists
+raw_refs = subprocess.check_output(["git", "-C", "/workspace/repo", "show-ref"]).decode("utf-8", "replace").splitlines()
+valid_gitana_refs = []
+for line in raw_refs:
+    parts = line.split()
+    if len(parts) < 2:
+        continue
+    ref = parts[1]
+    if ref.startswith("refs/remotes/") and not ref.endswith("/HEAD"):
+        valid_gitana_refs.append((ref[len("refs/remotes/"):], "branch"))
+    elif ref.startswith("refs/tags/"):
+        valid_gitana_refs.append((ref[len("refs/tags/"):], "tag"))
+
+valid_names = [name for name, _ in valid_gitana_refs]
+if branch not in valid_names:
+    formatted = ", ".join(["{} ({})".format(name, rtype) for name, rtype in sorted(valid_gitana_refs)]) or "NONE"
+    raise RuntimeError(
+        "Branch/reference '{}' does not exist in cloned repo! Valid BRANCH_NAME values for Gitana: [{}]".format(
+            branch, formatted
+        )
+    )
+
+print("[*] Verified branch/reference '{}' exists in /workspace/repo.".format(branch))
+sys.stdout.flush()
+
 print("[*] Waiting for MySQL database 'db' to become reachable...")
 sys.stdout.flush()
 last_err = None
